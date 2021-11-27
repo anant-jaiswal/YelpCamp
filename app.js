@@ -15,6 +15,10 @@ const flash = require("connect-flash");
 const { campgroundSchema, reviewSchema } = require('./schemas.js');
 const campgroundRoutes = require("./routes/campgroundRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const userRoutes = require("./routes/userRoutes");
+const passport = require("passport");
+const localStrategy = require("passport-local");
+const User = require("./models/user");
 
 
 
@@ -42,6 +46,7 @@ app.use(express.static(path.join(__dirname, "public")))
 //also check boilerplate.ejs
 app.use(flash());
 
+
 sessionConfig = {
     secret: "thisshouldbeabettersecret!",
     resave: false,
@@ -55,6 +60,26 @@ sessionConfig = {
 }//Right now the session store is memory store which is strictly 
 //advised to use only for development
 app.use(session(sessionConfig));//setting up sessions for YelpCamp
+
+app.use(passport.initialize());
+app.use(passport.session());//this is for persistent login sessions
+//this will enable us to skip adding the user._id to user sessions for
+//checking if the user has logged in or not
+//This must be placed after app.use(session)
+
+passport.use(new localStrategy(User.authenticate()));
+//this is telling passport to use passport-local that is required in localStrategy
+//which is further using the User model's authenticate() function which is
+//added automatically in the user model
+
+passport.serializeUser(User.serializeUser());
+//this is telling passport how to serialize user in the session
+//serializeUser() is added automatically to the user model
+
+passport.deserializeUser(User.deserializeUser());
+//this is telling passport how to deserialize user in a session
+//deserializeUser() is added automatically to the user model
+
 
 //Server side validations for campgrounds using Joi
 const validateCampground = (req, res, next) => {
@@ -89,13 +114,15 @@ const validateReview = (req, res, next) => {
 
 //Defining the flash middleware and it should be placed before route handlers
 app.use((req, res, next) => {
+    console.log(req.session);
+    res.locals.currentUser = req.user;
     res.locals.success = req.flash("success");
     res.locals.error = req.flash("error")
     next();//passing control to next middleware
 })//whatever res.locals will contain, it will be automatically passed in our templates
 //this ensures that we dont have to pass flash messages as parameters in different routes
 
-
+app.use("/", userRoutes);
 app.use("/campgrounds", campgroundRoutes)
 app.use("/campgrounds/:id/reviews", reviewRoutes);
 //mergeParams is set to true to get ":id"
@@ -103,6 +130,13 @@ app.use("/campgrounds/:id/reviews", reviewRoutes);
 app.get("/", (req, res) => {
     res.render("home");
 });
+
+// app.get("/register", async (req, res) => {
+//     const user = new User({ email: "anant.jaiswal@rocketmail.com", username: "anantJ" });
+//     const newUser = await User.register(user, "dcshoecousa");
+//     //register() is a static method added to the user model with passport-local-mongoose
+//     res.send(newUser);
+// })
 
 
 app.all("*", (req, res, next) => {
