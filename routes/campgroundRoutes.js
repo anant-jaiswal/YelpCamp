@@ -4,23 +4,7 @@ const catchAsync = require("../utilities/catchAsync");
 const ExpressError = require("../utilities/ExpressError");
 const Campground = require("../models/campground");
 const { campgroundSchema } = require('../schemas.js');
-const { isLoggedIn } = require("../middleware");
-
-
-
-//Server side validations for campgrounds using Joi
-const validateCampground = (req, res, next) => {
-
-    const { error } = campgroundSchema.validate(req.body);
-    if (error) {
-        const msg = error.details.map(e => e.message).join(",");
-        throw new ExpressError(msg, 400)
-    }
-    else {
-        next();
-        //passing control to the next error handling middleware
-    }
-}
+const { isLoggedIn, isAuthor, validateCampground } = require("../middleware");
 
 
 router.get("/", catchAsync(async (req, res) => {
@@ -38,6 +22,7 @@ router.post("/", isLoggedIn, validateCampground, catchAsync(async (req, res, nex
     //     throw new ExpressError("Invalid Campground Data", 400);
     // }
     const campground = new Campground(req.body.campground);
+    campground.author = req.user._id;
     await campground.save();
     req.flash("success", "Sucessfully created a new campground!")
     //Displaying flash success message after we have saved a campground
@@ -47,7 +32,13 @@ router.post("/", isLoggedIn, validateCampground, catchAsync(async (req, res, nex
 
 router.get("/:id", catchAsync(async (req, res) => {
     const { id } = req.params;
-    const campground = await Campground.findById(id).populate("reviews");
+    const campground = await Campground.findById(id).populate({
+        path: "reviews",//this is populating the reviews associated with the campground
+        populate: {
+            path: "author"//populating authors of each review as well
+        }
+    }).populate("author");//this is populating one author of campground seperately;
+    console.log(campground);
     //populate is used in order to display the reviews associated to each campground
     //in show.ejs
     // console.log(campground);
@@ -60,7 +51,7 @@ router.get("/:id", catchAsync(async (req, res) => {
     res.render("campgrounds/show", { campground });
 }));
 
-router.get("/:id/edit", isLoggedIn, catchAsync(async (req, res) => {
+router.get("/:id/edit", isLoggedIn, isAuthor, catchAsync(async (req, res) => {
     const { id } = req.params;
     const campground = await Campground.findById(id);
     //Displaying flash error if campground is not found
@@ -72,14 +63,14 @@ router.get("/:id/edit", isLoggedIn, catchAsync(async (req, res) => {
 
 }));
 
-router.put("/:id", isLoggedIn, validateCampground, catchAsync(async (req, res) => {
+router.put("/:id", isLoggedIn, isAuthor, validateCampground, catchAsync(async (req, res) => {
     const { id } = req.params;
     const campground = await Campground.findByIdAndUpdate(id, { ...req.body.campground });
     req.flash("success", "Successfully updated the campground.");
     res.redirect(`/campgrounds/${campground._id}`);
 }));
 
-router.delete("/:id", isLoggedIn, catchAsync(async (req, res) => {
+router.delete("/:id", isLoggedIn, isAuthor, catchAsync(async (req, res) => {
     const { id } = req.params;
     await Campground.findByIdAndDelete(id);
     req.flash("success", "Successfully deleted a campground.");

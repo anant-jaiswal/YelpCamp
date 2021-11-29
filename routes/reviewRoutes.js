@@ -1,32 +1,20 @@
 const express = require("express");
 const router = express.Router({ mergeParams: true });
-//merging params for review router to get campground ids
+//merging params for review router is set to true to get campground ids
 //check review router middleware
 const catchAsync = require("../utilities/catchAsync");
 const Campground = require("../models/campground");
 const Review = require("../models/reviews");
 const ExpressError = require("../utilities/ExpressError");
 const { reviewSchema } = require('../schemas.js');
+const { validateReview, isLoggedIn, isReviewAuthor } = require("../middleware")
 
 
-//Server side validations for reviews using Joi
-const validateReview = (req, res, next) => {
-    const { error } = reviewSchema.validate(req.body);
-    if (error) {
-        const msg = error.details.map(e => e.message).join(",");
-        throw new ExpressError(msg, 400);
-    }
-    else {
-        next();
-        //passing control to the next error handling middleware
-
-    }
-}
-
-router.post("/", validateReview, catchAsync(async (req, res) => {
-    const { id } = req.params;
+router.post("/", isLoggedIn, validateReview, catchAsync(async (req, res) => {
+    const { id } = req.params;//this is possible because mergeParams is set to true above
     const campground = await Campground.findById(id);
     const review = new Review(req.body.review);
+    review.author = req.user._id;
     campground.reviews.push(review);
     await review.save();
     await campground.save();
@@ -34,7 +22,7 @@ router.post("/", validateReview, catchAsync(async (req, res) => {
     res.redirect(`/campgrounds/${campground._id}`);
 }))
 
-router.delete("/:reviewId", catchAsync(async (req, res) => {
+router.delete("/:reviewId", isLoggedIn, isReviewAuthor, catchAsync(async (req, res) => {
     const { id, reviewId } = req.params;
     //The campground is getting updated by removing the particular review
     const campground = await Campground.findByIdAndUpdate(id, { $pull: { reviews: reviewId } });

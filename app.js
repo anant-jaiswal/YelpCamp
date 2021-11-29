@@ -115,7 +115,7 @@ const validateReview = (req, res, next) => {
 //Defining the flash middleware and it should be placed before route handlers
 app.use((req, res, next) => {
     console.log(req.session);
-    res.locals.currentUser = req.user;
+    res.locals.currentUser = req.user;//used to store the current user who is using YelpCamp
     res.locals.success = req.flash("success");
     res.locals.error = req.flash("error")
     next();//passing control to next middleware

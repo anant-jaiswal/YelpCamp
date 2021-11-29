@@ -43,6 +43,8 @@ router.get("/login", (req, res) => {
 
 //using passport.authenticate() which is added automatically 
 //and specifying strategy as local for logging in
+//also checking if the user already had a returnTo URL or not
+//check middleware.js
 router.post("/login", passport.authenticate("local", { failureFlash: true, failureRedirect: "/login" }), (req, res) => {
     req.flash("success", "Welcome back to YelpCamp!");
     const redirectURL = req.session.returnTo || "/campgrounds";
