@@ -2,9 +2,21 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const Review = require("./reviews")
 
+const ImageSchema = new Schema({
+    url: String,
+    filename: String
+});
+
+//adding a virtual called "thumbnail" to the image schema which will return the images
+//of width 200px
+//Note that "w_200" is a cloudinary api for image manipulation 
+ImageSchema.virtual("thumbnail").get(function () {
+    return this.url.replace("/upload", "/upload/w_200");
+})
+
 const campgroundSchema = new Schema({
     title: String,
-    image: String,
+    images: [ImageSchema],
     price: Number,
     description: String,
     location: String,

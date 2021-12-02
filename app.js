@@ -1,3 +1,11 @@
+//We have been working in "development" mode so far
+//this is to check that when the process.env.NODE_ENV is running in
+//"production" mode, the dotenv file is required and all the environment
+//variables from .env are saved in process.env in my node app
+if (process.env.NODE_ENV !== "production") {
+    require("dotenv").config();
+}
+
 const express = require("express");
 const app = express();
 const session = require("express-session");
@@ -80,37 +88,6 @@ passport.deserializeUser(User.deserializeUser());
 //this is telling passport how to deserialize user in a session
 //deserializeUser() is added automatically to the user model
 
-
-//Server side validations for campgrounds using Joi
-const validateCampground = (req, res, next) => {
-
-    const { error } = campgroundSchema.validate(req.body);
-    if (error) {
-        const msg = error.details.map(e => e.message).join(",");
-        throw new ExpressError(msg, 400)
-    }
-    else {
-        next();
-        //passing control to the next error handling middleware
-    }
-}
-
-
-
-
-//Server side validations for reviews using Joi
-const validateReview = (req, res, next) => {
-    const { error } = reviewSchema.validate(req.body);
-    if (error) {
-        const msg = error.details.map(e => e.message).join(",");
-        throw new ExpressError(msg, 400);
-    }
-    else {
-        next();
-        //passing control to the next error handling middleware
-
-    }
-}
 
 //Defining the flash middleware and it should be placed before route handlers
 app.use((req, res, next) => {
